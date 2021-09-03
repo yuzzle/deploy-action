@@ -16,8 +16,23 @@ inputs:
   cluster:
     description: "Cluster name"
     required: true
+  image-tag:
+    description: "Image tag"
+    required: true
   github-scope:
-    description: "Gihub scope name for creating .npmrc"
+    description: "Github scope name for creating .npmrc"
+    required: true
+  github-token:
+    description: "Github package token"
+    required: true
+  aws-access-key-id:
+    description: "Aws access key id"
+    required: true
+  aws-secret-access-key:
+    description: "Aws secret access key"
+    required: true
+  aws-region:
+    description: "Aws region"
     required: true
 
 runs:
@@ -25,19 +40,21 @@ runs:
   steps:
     - name: Create .npmrc
       run: |
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.PKG_AUTH_TOKEN }}" >> ~/.npmrc
-          echo "${{ github-scope }}:registry=https://npm.pkg.github.com" >> ~/.npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ inputs.github-token }}" >> ~/.npmrc
+          echo "${{ inputs.github-scope }}:registry=https://npm.pkg.github.com" >> ~/.npmrc
+      shell: bash
     # Runs a packages install
     - name: Running package install
       run: yarn
+      shell: bash
 
     # Configure AWS credentials
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v1
       with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ secrets.AWS_REGION }}
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        aws-region: ${{ inputs.aws-region }}
 
     # Login to ECR
     - name: Login to Amazon ECR
@@ -48,16 +65,18 @@ runs:
     - name: Build, tag, and push image to Amazon ECR
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-        ECR_REPOSITORY: ${{ ecr-repository }}
-        IMAGE_TAG: ${{ github.sha }}
+        ECR_REPOSITORY: ${{ inputs.ecr-repository }}
+        IMAGE_TAG: ${{ inputs.image-tag }}
       run: |
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+      shell: bash
 
     # Download task-dfinition json file
     - name: Download task-definition
       run: |
-        aws ecs describe-task-definition --task-definition ${{ task-definition }} --query taskDefinition > task-definition.json
+        aws ecs describe-task-definition --task-definition ${{ inputs.task-definition }} --query taskDefinition > task-definition.json
+      shell: bash
 
     # Replace image on task definition
     - name: Create task definition revision
@@ -65,13 +84,13 @@ runs:
       uses: aws-actions/amazon-ecs-render-task-definition@v1
       with:
         task-definition: task-definition.json
-        container-name: ${{ container-name }}
-        image: ${{ steps.login-ecr.outputs.registry }}/${{ ecr-repository }}:${{ github.sha }}
+        container-name: ${{ inputs.container-name }}
+        image: ${{ steps.login-ecr.outputs.registry }}/${{ inputs.ecr-repository }}:${{ inputs.image-tag }}
 
     # Deploy task definition
     - name: Deploy task definition to service
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
       with:
         task-defintion: ${{ steps.render-image.outputs.task-definition }}
-        service: ${{ service }}
-        cluster: ${{ cluster }}
+        service: ${{ inputs.service }}
+        cluster: ${{ inputs.cluster }}
