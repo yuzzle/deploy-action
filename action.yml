@@ -34,6 +34,9 @@ inputs:
   aws-region:
     description: "Aws region"
     required: true
+  build-app:
+    description: "Should build app by running yarn build"
+    default: false
 
 runs:
   using: "composite"
@@ -47,6 +50,11 @@ runs:
     - name: Running package install
       run: yarn
       shell: bash
+
+    # Builds the app if requested
+    - name: Build the app if requested
+      if: ${{ inputs.build-app }}
+      run: yarn build
 
     # Configure AWS credentials
     - name: Configure AWS credentials
