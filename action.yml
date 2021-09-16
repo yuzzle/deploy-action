@@ -53,8 +53,12 @@ runs:
 
     # Builds the app if requested
     - name: Build the app if requested
-      if: ${{ inputs.build-app }}
-      run: yarn build
+      run: |
+        if [[ "${{ inputs.build-app }}" ]]; then
+          yarn build
+        fi
+        exit 0
+      shell: bash
 
     # Configure AWS credentials
     - name: Configure AWS credentials
