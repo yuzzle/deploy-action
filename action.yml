@@ -105,7 +105,7 @@ runs:
 
     # Deploy task definition
     - name: Deploy task definition to service
-      uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v2.2.0
       with:
         task-definition: ${{ steps.render-image.outputs.task-definition }}
         service: ${{ inputs.service }}
