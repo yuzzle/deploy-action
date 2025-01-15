@@ -57,7 +57,7 @@ runs:
     # Builds the app if requested
     - name: Build the app if requested
       run: |
-        if [[ "${{ inputs.build-app }}" ]]; then
+        if [[ "${{ inputs.build-app }}" == "true" ]]; then
           yarn build
         fi
         exit 0
@@ -84,7 +84,7 @@ runs:
         IMAGE_TAG: ${{ inputs.image-tag }}
         GITHUB_TOKEN: ${{ inputs.github-token }}
       run: |
-        if [[ "${{ inputs.requires-platform-build }}" ]]; then
+        if [[ "${{ inputs.requires-platform-build }}" == "true" ]]; then
           docker buildx create --use
           docker buildx build --platform linux/amd64,linux/arm64 -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG --build-arg PKG_AUTH_TOKEN=$GITHUB_TOKEN .
         else
@@ -92,6 +92,7 @@ runs:
         fi
 
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        exit 0
       shell: bash
 
     # Download task-dfinition json file
